@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบัญชี</title>
+    <title>ระบบบัญชี (Airtable)</title>
     <link href="https://fonts.googleapis.com/css2?family=Prompt&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -21,1701 +21,624 @@
         .balance-bg { background-color: #e0f2fe; } /* Light blue */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .tab-button.active {
-            background-color: white;
-            color: #16a34a; /* Tailwind's green-600 */
-            font-weight: bold;
+        .tab-button.active-tab {
+            border-color: #3B82F6; /* Tailwind blue-500 */
+            color: #2563EB; /* Tailwind blue-700 */
         }
-        /* Custom styles for dashboard summary cards */
-        .summary-card {
-            background-color: white;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            text-align: center;
-        }
-        .summary-card h3 {
-            font-size: 1.25rem; /* text-xl */
-            font-weight: 600; /* font-semibold */
-            margin-bottom: 0.5rem;
-        }
-        .summary-card p {
-            font-size: 2.25rem; /* text-4xl */
-            font-weight: 700; /* font-bold */
-        }
-        /* Specific styling for alignment in summary table */
-        .summary-table-cell {
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            padding-left: 1rem;
-            padding-right: 1rem;
-            text-align: left;
-            font-size: 0.875rem; /* text-sm */
-        }
-        .summary-table-cell.numeric {
-            text-align: right;
-            white-space: nowrap; /* Prevent wrapping for numbers and percentages */
+        .transaction-item:hover {
+            background-color: #f0f0f0; /* Light gray on hover */
         }
     </style>
 </head>
-<body class="font-['Prompt'] bg-gray-50">
-    <header class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">ระบบบัญชี</h1>
-            <nav>
-                <ul class="flex space-x-4">
-                    <li><a href="#" class="tab-button p-2 rounded hover:bg-white hover:text-green-600 active" data-tab="dashboard">Dashboard</a></li>
-                    <li><a href="#" class="tab-button p-2 rounded hover:bg-white hover:text-green-600" data-tab="income-expense">บันทึกรายจ่าย</a></li>
-                    <li><a href="#" class="tab-button p-2 rounded hover:bg-white hover:text-green-600" data-tab="projects">โปรเจค</a></li>
-                    <li><a href="#" class="tab-button p-2 rounded hover:bg-white hover:text-green-600" data-tab="employees">พนักงาน</a></li>
-                    <li><a href="#" class="tab-button p-2 rounded hover:bg-white hover:text-green-600" data-tab="categories">หมวดหมู่</a></li>
-                </ul>
-            </nav>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">ระบบบัญชีรายรับ-รายจ่าย (Airtable)</h1>
+
+        <div class="mb-6">
+            <div class="flex border-b border-gray-200">
+                <button class="tab-button px-4 py-2 text-lg font-medium text-gray-600 border-b-2 border-transparent hover:border-blue-500 active-tab" onclick="showTab(event, 'dashboard')">หน้าหลัก</button>
+                <button class="tab-button px-4 py-2 text-lg font-medium text-gray-600 border-b-2 border-transparent hover:border-blue-500" onclick="showTab(event, 'addTransaction')">บันทึกรายการ</button>
+                <button class="tab-button px-4 py-2 text-lg font-medium text-gray-600 border-b-2 border-transparent hover:border-blue-500" onclick="showTab(event, 'transactionHistory')">ประวัติรายการ</button>
+                <button class="tab-button px-4 py-2 text-lg font-medium text-gray-600 border-b-2 border-transparent hover:border-blue-500" onclick="showTab(event, 'report')">รายงาน</button>
+            </div>
         </div>
-    </header>
 
-    <main class="container mx-auto mt-8 p-4 bg-white shadow-lg rounded-lg">
-        <section id="dashboard" class="tab-content active">
-            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">ภาพรวมโปรเจคและข้อมูลเฉพาะ</h2>
-            <div class="p-6 bg-gray-100 rounded-lg shadow-inner">
-
-                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-                    <h3 class="text-xl font-bold mb-4 text-center text-gray-800">สรุปโปรเจคทั้งหมด</h3>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                            <thead>
-                                <tr class="bg-gray-100 border-b">
-                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ชื่อโปรเจค</th>
-                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">งบประมาณ</th>
-                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ยอดรวมรายจ่าย</th>
-                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">คงเหลืองบประมาณ</th>
-                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">คงเหลือระยะเวลาทำงาน</th>
-                                </tr>
-                            </thead>
-                            <tbody id="allProjectSummaryList">
-                                </tbody>
-                        </table>
-                    </div>
+        <div id="dashboard" class="tab-content active">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">ภาพรวม</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
+                <div class="p-4 rounded-lg shadow-md income-bg">
+                    <p class="text-gray-600 text-lg">รวมรายรับ</p>
+                    <p id="totalIncome" class="text-3xl font-bold text-green-700">0.00</p>
                 </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-xl font-bold mb-4 text-center text-gray-800">ข้อมูลโปรเจคเฉพาะ</h3>
-                    <div class="mb-4">
-                        <label for="selectProjectDashboard" class="block text-sm font-medium text-gray-700 mb-2">เลือกโปรเจคเพื่อดูรายละเอียด:</label>
-                        <select id="selectProjectDashboard" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
-                            <option value="">-- เลือกโปรเจค --</option>
-                            </select>
-                    </div>
-
-                    <div id="individualProjectDashboard" class="hidden">
-                        <h4 class="text-lg font-semibold mb-4" id="individualProjectName"></h4>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                            <div class="bg-gray-50 p-6 rounded-lg shadow-inner flex flex-col items-center justify-center">
-                                <h5 class="text-md font-bold mb-4 text-center text-gray-800">สรุปงบประมาณโปรเจค</h5>
-                                <div class="w-full md:w-3/4 lg:w-2/3 max-w-sm">
-                                    <canvas id="projectBudgetChart"></canvas>
-                                </div>
-                                <p class="text-sm text-gray-600 mt-2" id="projectBudgetInfo"></p>
-                            </div>
-                            <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
-                                <h5 class="text-md font-bold mb-4 text-center text-gray-800">รายรับ-รายจ่ายตามหมวดหมู่ (โปรเจคนี้)</h5>
-                                <canvas id="projectCategoryBreakdownChart"></canvas>
-                            </div>
-                        </div>
-
-                        <h5 class="text-md font-bold mb-4 text-center text-gray-800">รายการรายรับ-รายจ่ายของโปรเจค</h5>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                                <thead>
-                                    <tr class="bg-gray-100 border-b">
-                                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">วันที่</th>
-                                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ประเภท</th>
-                                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">จำนวนเงิน</th>
-                                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">หมวดหมู่</th>
-                                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">พนักงาน</th> <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">รายละเอียด</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="projectTransactionList">
-                                    </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="p-4 rounded-lg shadow-md expense-bg">
+                    <p class="text-gray-600 text-lg">รวมรายจ่าย</p>
+                    <p id="totalExpense" class="text-3xl font-bold text-red-700">0.00</p>
+                </div>
+                <div class="p-4 rounded-lg shadow-md balance-bg">
+                    <p class="text-gray-600 text-lg">คงเหลือ</p>
+                    <p id="balance" class="text-3xl font-bold text-blue-700">0.00</p>
                 </div>
             </div>
-        </section>
 
-        <section id="income-expense" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4">บันทึกรายจ่าย</h2>
-
-            <form id="transactionForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 p-6 border rounded-lg bg-gray-50">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="type" class="block text-sm font-medium text-gray-700">ประเภท</label>
-                    <select id="type" name="type" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
-                        <option value="expense">รายจ่าย</option>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-700">รายรับตามหมวดหมู่</h3>
+                    <canvas id="incomeChart"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-700">รายจ่ายตามหมวดหมู่</h3>
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="addTransaction" class="tab-content">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">บันทึกรายการใหม่</h2>
+            <form id="transactionForm" class="space-y-4">
+                <div>
+                    <label for="transactionDate" class="block text-gray-700 text-sm font-bold mb-2">วันที่:</label>
+                    <input type="date" id="transactionDate" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">ประเภท:</label>
+                    <div class="flex items-center">
+                        <input type="radio" id="incomeType" name="transactionType" value="income" checked class="mr-2">
+                        <label for="incomeType" class="mr-4">รายรับ</label>
+                        <input type="radio" id="expenseType" name="transactionType" value="expense" class="mr-2">
+                        <label for="expenseType">รายจ่าย</label>
+                    </div>
+                </div>
+                <div>
+                    <label for="amount" class="block text-gray-700 text-sm font-bold mb-2">จำนวนเงิน (บาท):</label>
+                    <input type="number" id="amount" step="0.01" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label for="category" class="block text-gray-700 text-sm font-bold mb-2">หมวดหมู่:</label>
+                    <input type="text" id="category" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" list="categoryOptions">
+                    <datalist id="categoryOptions">
+                        </datalist>
+                </div>
+                <div>
+                    <label for="project" class="block text-gray-700 text-sm font-bold mb-2">โปรเจค (ไม่บังคับ):</label>
+                    <input type="text" id="project" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" list="projectOptions">
+                    <datalist id="projectOptions">
+                        </datalist>
+                </div>
+                <div>
+                    <label for="employee" class="block text-gray-700 text-sm font-bold mb-2">พนักงาน (ไม่บังคับ):</label>
+                    <input type="text" id="employee" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" list="employeeOptions">
+                    <datalist id="employeeOptions">
+                        </datalist>
+                </div>
+                <div>
+                    <label for="description" class="block text-gray-700 text-sm font-bold mb-2">รายละเอียด (ไม่บังคับ):</label>
+                    <textarea id="description" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+                </div>
+                <div>
+                    <label for="attachment" class="block text-gray-700 text-sm font-bold mb-2">แนบไฟล์ (ไม่บังคับ):</label>
+                    <input type="file" id="attachment" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <p class="text-xs text-gray-500 mt-1">ไฟล์สูงสุด 10MB</p>
+                </div>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">บันทึกรายการ</button>
+            </form>
+        </div>
+
+        <div id="transactionHistory" class="tab-content">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">ประวัติรายการ</h2>
+            <div class="mb-4">
+                <input type="text" id="searchInput" onkeyup="filterTransactions()" placeholder="ค้นหา (วันที่, ประเภท, หมวดหมู่, โปรเจค, พนักงาน, รายละเอียด)" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">วันที่</th>
+                            <th class="py-3 px-6 text-left">ประเภท</th>
+                            <th class="py-3 px-6 text-left">จำนวนเงิน (บาท)</th>
+                            <th class="py-3 px-6 text-left">หมวดหมู่</th>
+                            <th class="py-3 px-6 text-left">โปรเจค</th>
+                            <th class="py-3 px-6 text-left">พนักงาน</th>
+                            <th class="py-3 px-6 text-left">รายละเอียด</th>
+                            <th class="py-3 px-6 text-left">ไฟล์แนบ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionList" class="text-gray-700 text-sm font-light">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="report" class="tab-content">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">รายงาน</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label for="filterType" class="block text-gray-700 text-sm font-bold mb-2">ประเภท:</label>
+                    <select id="filterType" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="all">ทั้งหมด</option>
                         <option value="income">รายรับ</option>
+                        <option value="expense">รายจ่าย</option>
                     </select>
                 </div>
                 <div>
-                    <label for="amount" class="block text-sm font-medium text-gray-700">จำนวนเงิน</label>
-                    <input type="number" id="amount" name="amount" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500" placeholder="จำนวนเงิน" required>
-                </div>
-                <div>
-                    <label for="category" class="block text-sm font-medium text-gray-700">หมวดหมู่</label>
-                    <select id="category" name="category" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500" required>
-                        </select>
-                </div>
-                <div>
-                    <label for="project" class="block text-sm font-medium text-gray-700">โปรเจค</label>
-                    <select id="project" name="project" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
-                        <option value="">ไม่มีโปรเจค</option>
-                        </select>
-                </div>
-                <div>
-                    <label for="employee" class="block text-sm font-medium text-gray-700">พนักงานที่ทำรายการ</label>
-                    <select id="employee" name="employee" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
-                        <option value="">ไม่ระบุพนักงาน</option>
-                        </select>
-                </div>
-                <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700">รายละเอียด</label>
-                    <input type="text" id="description" name="description" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500" placeholder="รายละเอียด">
-                </div>
-                <div>
-                    <label for="date" class="block text-sm font-medium text-gray-700">วันที่</label>
-                    <input type="date" id="date" name="date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
-                </div>
-                <div>
-                    <label for="attachment" class="block text-sm font-medium text-gray-700">แนบไฟล์ (JPG, PDF)</label>
-                    <input type="file" id="attachment" name="attachment" accept=".jpg, .jpeg, .png, .pdf" class="mt-1 block w-full text-sm text-gray-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-md file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-green-50 file:text-green-700
-                        hover:file:bg-green-100">
-                </div>
-                <div class="col-span-1 md:col-span-2 lg:col-span-1 flex items-end">
-                    <button type="submit" class="w-full bg-green-500 text-white p-2 rounded-md hover:bg-green-600 transition duration-200">บันทึกรายการ</button>
-                </div>
-            </form>
-
-            <div class="mb-6 p-4 border rounded-lg bg-gray-50 flex flex-wrap gap-4 items-end">
-                <div>
-                    <label for="filterType" class="block text-sm font-medium text-gray-700">กรองตามประเภท</label>
-                    <select id="filterType" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="all">ทั้งหมด</option>
-                        <option value="expense">รายจ่าย</option>
-                        <option value="income">รายรับ</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filterProject" class="block text-sm font-medium text-gray-700">กรองตามโปรเจค</label>
-                    <select id="filterProject" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="filterProject" class="block text-gray-700 text-sm font-bold mb-2">โปรเจค:</label>
+                    <select id="filterProject" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                         <option value="all">ทั้งหมด</option>
                         </select>
                 </div>
                 <div>
-                    <label for="filterCategory" class="block text-sm font-medium text-gray-700">กรองตามหมวดหมู่</label>
-                    <select id="filterCategory" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="filterCategory" class="block text-gray-700 text-sm font-bold mb-2">หมวดหมู่:</label>
+                    <select id="filterCategory" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                         <option value="all">ทั้งหมด</option>
                         </select>
                 </div>
                 <div>
-                    <label for="filterEmployee" class="block text-sm font-medium text-gray-700">กรองตามพนักงาน</label>
-                    <select id="filterEmployee" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="filterEmployee" class="block text-gray-700 text-sm font-bold mb-2">พนักงาน:</label>
+                    <select id="filterEmployee" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                         <option value="all">ทั้งหมด</option>
                         </select>
                 </div>
                 <div>
-                    <label for="filterStartDate" class="block text-sm font-medium text-gray-700">จากวันที่</label>
-                    <input type="date" id="filterStartDate" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="startDate" class="block text-gray-700 text-sm font-bold mb-2">จากวันที่:</label>
+                    <input type="date" id="startDate" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                 </div>
                 <div>
-                    <label for="filterEndDate" class="block text-sm font-medium text-gray-700">ถึงวันที่</label>
-                    <input type="date" id="filterEndDate" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="endDate" class="block text-gray-700 text-sm font-bold mb-2">ถึงวันที่:</label>
+                    <input type="date" id="endDate" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                 </div>
-                <button id="applyFilter" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition duration-200">ใช้ตัวกรอง</button>
-                <button id="resetFilter" class="bg-gray-400 text-white p-2 rounded-md hover:bg-gray-500 transition duration-200">รีเซ็ต</button>
-                <button id="downloadPdf" class="bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition duration-200">ดาวน์โหลด PDF</button>
-                <button id="downloadExcel" class="bg-green-600 text-white p-2 rounded-md hover:bg-green-700 transition duration-200">ดาวน์โหลด Excel</button>
             </div>
+            <button onclick="generateReport()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">สร้างรายงาน Excel</button>
+            <div id="reportResult" class="mt-4">
+                </div>
+        </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                        <tr class="bg-gray-100 border-b">
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">วันที่</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ประเภท</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">จำนวนเงิน</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">หมวดหมู่</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">โปรเจค</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">พนักงาน</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">รายละเอียด</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ไฟล์แนบ</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionList">
-                        </tbody>
-                </table>
-            </div>
-
-        </section>
-
-        <section id="projects" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4">โปรเจค</h2>
-            <form id="projectForm" class="mb-8 p-6 border rounded-lg bg-gray-50 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                    <label for="projectName" class="block text-sm font-medium text-gray-700">ชื่อโปรเจค</label>
-                    <input type="text" id="projectName" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="ชื่อโปรเจค" required>
-                </div>
-                <div>
-                    <label for="projectBudget" class="block text-sm font-medium text-gray-700">งบประมาณ</label>
-                    <input type="number" id="projectBudget" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="งบประมาณ (ไม่บังคับ)">
-                </div>
-                <div>
-                    <label for="projectStartDate" class="block text-sm font-medium text-gray-700">กำหนดเริ่มงาน</label>
-                    <input type="date" id="projectStartDate" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                </div>
-                <div>
-                    <label for="projectEndDate" class="block text-sm font-medium text-gray-700">กำหนดส่งงาน</label>
-                    <input type="date" id="projectEndDate" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                </div>
-                <div class="col-span-full flex justify-end">
-                    <button type="submit" class="w-full md:w-auto bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition duration-200">เพิ่มโปรเจค</button>
-                </div>
-            </form>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                        <tr class="bg-gray-100 border-b">
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ชื่อโปรเจค</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">งบประมาณ</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">กำหนดเริ่มงาน</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">กำหนดส่งงาน</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ยอดรวมรายรับ</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ยอดรวมรายจ่าย</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">คงเหลือ</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="projectList">
-                        </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section id="employees" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4">พนักงาน</h2>
-            <form id="employeeForm" class="mb-8 p-6 border rounded-lg bg-gray-50 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                    <label for="employeeName" class="block text-sm font-medium text-gray-700">ชื่อพนักงาน</label>
-                    <input type="text" id="employeeName" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="ชื่อพนักงาน" required>
-                </div>
-                <div>
-                    <label for="employeePosition" class="block text-sm font-medium text-gray-700">ตำแหน่ง</label>
-                    <input type="text" id="employeePosition" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="ตำแหน่ง">
-                </div>
-                <div>
-                    <button type="submit" class="w-full bg-indigo-500 text-white p-2 rounded-md hover:bg-indigo-600 transition duration-200">เพิ่มพนักงาน</button>
-                </div>
-            </form>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                        <tr class="bg-gray-100 border-b">
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ชื่อพนักงาน</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ตำแหน่ง</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="employeeList">
-                        </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section id="categories" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4">หมวดหมู่</h2>
-            <form id="categoryForm" class="mb-8 p-6 border rounded-lg bg-gray-50 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                    <label for="categoryName" class="block text-sm font-medium text-gray-700">ชื่อหมวดหมู่</label>
-                    <input type="text" id="categoryName" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="ชื่อหมวดหมู่" required>
-                </div>
-                <div>
-                    <label for="categoryType" class="block text-sm font-medium text-gray-700">ประเภท</label>
-                    <select id="categoryType" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="expense">รายจ่าย</option>
-                        <option value="income">รายรับ</option>
-                    </select>
-                </div>
-                <div>
-                    <button type="submit" class="w-full bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition duration-200">เพิ่มหมวดหมู่</button>
-                </div>
-            </form>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                        <tr class="bg-gray-100 border-b">
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ชื่อหมวดหมู่</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ประเภท</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="categoryList">
-                        </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+    </div>
 
     <script>
-        let transactions = [];
-        let employees = [];
-        let projects = [];
-        let categories = [];
+        // **สำคัญ: แทนที่ด้วย API Key และ Base ID ของ Airtable ของคุณ**
+        const AIRTABLE_API_KEY = 'patam0fHJoRVhOIAC.8e18663b57dfbdb063745b69d360bf721852738fb330f5e88c53a6066bace225'; // เช่น 'patXXXXXXXXXXXXXX' (Personal Access Token)
+        const AIRTABLE_BASE_ID = 'appPkKUv3Gw8cJC8m.'; // เช่น 'appXXXXXXXXXXXXXX'
+        const AIRTABLE_TABLE_NAME = 'Transactions'; // ชื่อ Table ของคุณใน Airtable (ตัวพิมพ์ใหญ่-เล็กต้องตรงกัน)
 
-        // Chart instances for Individual Project Dashboard
-        let projectBudgetChartInstance;
-        let projectCategoryBreakdownChartInstance;
-
-        // Ensure Chart.js Datalabels plugin is registered globally
-        Chart.register(ChartDataLabels);
+        let allTransactions = []; // Store all transactions fetched from Airtable
+        let incomeChartInstance, expenseChartInstance; // Chart.js instances
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            // Set initial data if empty
-            if (transactions.length === 0 && projects.length === 0 && categories.length === 0 && employees.length === 0) {
-                setInitialSampleData();
-            }
-            setupTabSwitching();
-            populateFilterOptions(); // This will now also populate the employee dropdown
-            populateProjectSelectForDashboard();
-            // The initial 'click' on the Dashboard tab will trigger updateDashboardData and renderAllProjectSummary
-            document.querySelector('.tab-button[data-tab="dashboard"]')?.click();
+            showTab(null, 'dashboard'); // Show dashboard on load
+            document.getElementById('transactionForm').addEventListener('submit', handleFormSubmit);
+            document.getElementById('searchInput').addEventListener('input', filterTransactions);
 
-            // Event listener for project selection on dashboard
-            document.getElementById('selectProjectDashboard')?.addEventListener('change', (event) => {
-                const selectedProjectName = event.target.value;
-                if (selectedProjectName) {
-                    renderIndividualProjectDashboard(selectedProjectName);
-                    document.getElementById('individualProjectDashboard').classList.remove('hidden');
-                } else {
-                    document.getElementById('individualProjectDashboard').classList.add('hidden');
-                    // Destroy charts when no project is selected
-                    if (projectBudgetChartInstance) projectBudgetChartInstance.destroy();
-                    if (projectCategoryBreakdownChartInstance) projectCategoryBreakdownChartInstance.destroy();
-                }
-            });
+            // Fetch initial data when the page loads
+            fetchTransactions();
+            // No separate fetchSummaryData needed, we'll calculate from allTransactions
         });
 
-        // Helper function to format currency as integer with comma
-        function formatCurrency(amount) {
-            return Math.round(amount).toLocaleString('th-TH') + ' บาท';
-        }
-
-        function setupTabSwitching() {
-            const tabButtons = document.querySelectorAll('.tab-button');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            tabButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const targetTab = e.target.getAttribute('data-tab');
-
-                    tabContents.forEach(content => {
-                        content.classList.remove('active');
-                    });
-                    tabButtons.forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-
-                    document.getElementById(targetTab)?.classList.add('active');
-                    e.target.classList.add('active');
-
-                    // Specific actions for each tab when activated
-                    if (targetTab === 'dashboard') {
-                        renderAllProjectSummary();
-                        populateProjectSelectForDashboard(); // Ensure project dropdown is updated
-                        document.getElementById('individualProjectDashboard').classList.add('hidden'); // Hide individual project dashboard by default
-                        document.getElementById('selectProjectDashboard').value = ''; // Reset dropdown
-                    } else if (targetTab === 'income-expense') { // Changed to 'บันทึกรายจ่าย' (income-expense tab id)
-                        populateFilterOptions(); // Ensure all dropdowns (including new employee) are up-to-date
-                        renderTransactions(); // Re-render in case of changes from other tabs
-                    } else if (targetTab === 'projects') { // Changed to 'โปรเจค' (projects tab id)
-                        renderProjects();
-                    } else if (targetTab === 'employees') { // Changed to 'พนักงาน' (employees tab id)
-                        renderEmployees();
-                        populateFilterOptions(); // Update employee dropdowns when employees change
-                    } else if (targetTab === 'categories') { // Changed to 'หมวดหมู่' (categories tab id)
-                        renderCategories();
-                        populateFilterOptions(); // Update category dropdowns when categories change
+        async function fetchTransactions() {
+            try {
+                showLoading();
+                const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`, {
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_API_KEY}`
                     }
                 });
-            });
-        }
 
-        function renderAllProjectSummary() {
-            const allProjectSummaryList = document.getElementById('allProjectSummaryList');
-            if (!allProjectSummaryList) return;
-            allProjectSummaryList.innerHTML = '';
-
-            const currentDate = new Date(); // Get current date for remaining duration calculation
-
-            projects.forEach(proj => {
-                const projectTransactions = transactions.filter(t => t.project === proj.name);
-                const totalIncome = projectTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-                const totalExpense = projectTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-
-                const remainingBudget = (proj.budget || 0) - totalExpense; // Calculate remaining budget
-
-                // Calculate percentages
-                let expensePercentage = 'N/A';
-                let remainingBudgetPercentage = 'N/A';
-                if (proj.budget > 0) {
-                    expensePercentage = ((totalExpense / proj.budget) * 100).toFixed(0);
-                    remainingBudgetPercentage = ((remainingBudget / proj.budget) * 100).toFixed(0);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
                 }
+                const data = await response.json();
 
+                // Map Airtable records to our transaction format
+                allTransactions = data.records.map(record => {
+                    const fields = record.fields;
+                    // Airtable stores attachments as an array of objects
+                    const attachment = fields.Attachment && fields.Attachment.length > 0 ? fields.Attachment[0] : null;
 
-                // Calculate remaining duration
-                let remainingDurationString = 'N/A';
-                if (proj.startDate && proj.endDate) {
-                    const startDate = new Date(proj.startDate);
-                    const endDate = new Date(proj.endDate);
-
-                    if (endDate < currentDate) {
-                        remainingDurationString = 'สิ้นสุดแล้ว';
-                    } else {
-                        // Calculate difference in months
-                        let diffMonths = (endDate.getFullYear() - currentDate.getFullYear()) * 12;
-                        diffMonths -= currentDate.getMonth();
-                        diffMonths += endDate.getMonth();
-                        
-                        // Adjust if current day is after end day of the month or vice versa
-                        if (currentDate.getDate() > endDate.getDate() && diffMonths > 0) {
-                            diffMonths--;
-                        }
-
-                        if (diffMonths > 0) {
-                            remainingDurationString = `${diffMonths} เดือน`;
-                        } else if (diffMonths === 0) {
-                            const diffDays = Math.ceil(Math.abs(endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-                            if (diffDays > 0) {
-                                remainingDurationString = `${diffDays} วัน`;
-                            } else {
-                                remainingDurationString = 'วันนี้';
-                            }
-                        } else {
-                            remainingDurationString = 'สิ้นสุดแล้ว'; // Should not happen with endDate < currentDate check above, but for safety
-                        }
-                    }
-                }
-
-
-                const row = allProjectSummaryList.insertRow();
-                row.classList.add('border-b');
-                row.innerHTML = `
-                    <td class="summary-table-cell">${proj.name}</td>
-                    <td class="summary-table-cell numeric">${proj.budget > 0 ? formatCurrency(proj.budget) : '-'}</td>
-                    <td class="summary-table-cell numeric text-red-700">${formatCurrency(totalExpense)} ${expensePercentage !== 'N/A' ? `(${expensePercentage}%)` : ''}</td>
-                    <td class="summary-table-cell numeric ${remainingBudget >= 0 ? 'text-blue-700' : 'text-red-700'}">${formatCurrency(remainingBudget)} ${remainingBudgetPercentage !== 'N/A' ? `(${remainingBudgetPercentage}%)` : ''}</td>
-                    <td class="summary-table-cell">${remainingDurationString}</td>
-                `;
-            });
+                    return {
+                        id: record.id, // Keep Airtable record ID for potential future updates/deletes
+                        date: fields.Date,
+                        type: fields.Type,
+                        amount: parseFloat(fields.Amount || 0), // Ensure amount is number
+                        category: fields.Category,
+                        project: fields.Project,
+                        employee: fields.Employee,
+                        description: fields.Description,
+                        attachmentName: attachment ? attachment.filename : '',
+                        attachmentUrl: attachment ? attachment.url : '' // Airtable provides direct URL
+                    };
+                });
+                
+                renderTransactionList();
+                populateFilters();
+                updateDashboardFromTransactions(); // Calculate summary from fetched data
+                hideLoading();
+            } catch (error) {
+                console.error("Error fetching transactions:", error);
+                Swal.fire('ข้อผิดพลาด', `ไม่สามารถดึงข้อมูลธุรกรรมได้: ${error.message}`, 'error');
+                hideLoading();
+            }
         }
 
-        function populateProjectSelectForDashboard() {
-            const selectProjectDashboard = document.getElementById('selectProjectDashboard');
-            if (!selectProjectDashboard) return;
-
-            selectProjectDashboard.innerHTML = '<option value="">-- เลือกโปรเจค --</option>';
-            projects.forEach(proj => {
-                const option = document.createElement('option');
-                option.value = proj.name;
-                option.textContent = proj.name;
-                selectProjectDashboard.appendChild(option);
-            });
-        }
-
-        function renderIndividualProjectDashboard(projectName) {
-            const individualProjectDashboardDiv = document.getElementById('individualProjectDashboard');
-            const individualProjectNameEl = document.getElementById('individualProjectName');
-            const projectBudgetInfoEl = document.getElementById('projectBudgetInfo');
-            const projectTransactionListEl = document.getElementById('projectTransactionList');
-
-            if (!individualProjectDashboardDiv || !individualProjectNameEl || !projectBudgetInfoEl || !projectTransactionListEl) return;
-
-            individualProjectNameEl.textContent = `รายละเอียดโปรเจค: ${projectName}`;
-            individualProjectDashboardDiv.classList.remove('hidden');
-            projectTransactionListEl.innerHTML = ''; // Clear previous transactions
-
-            const project = projects.find(p => p.name === projectName);
-            const projectTransactions = transactions.filter(t => t.project === projectName);
-
+        function updateDashboardFromTransactions() {
             let totalIncome = 0;
             let totalExpense = 0;
-            const categoryBreakdown = {}; // For category breakdown chart
+            const incomeByCategory = {};
+            const expenseByCategory = {};
 
-            projectTransactions.forEach(t => {
-                const amount = parseFloat(t.amount);
+            allTransactions.forEach(t => {
                 if (t.type === 'income') {
-                    totalIncome += amount;
-                    // Ensure categoryBreakdown[t.category] exists and has 'income' property
-                    if (!categoryBreakdown[t.category]) categoryBreakdown[t.category] = { income: 0, expense: 0 };
-                    categoryBreakdown[t.category].income += amount;
+                    totalIncome += t.amount;
+                    incomeByCategory[t.category] = (incomeByCategory[t.category] || 0) + t.amount;
                 } else if (t.type === 'expense') {
-                    totalExpense += amount;
-                    // Ensure categoryBreakdown[t.category] exists and has 'expense' property
-                    if (!categoryBreakdown[t.category]) categoryBreakdown[t.category] = { income: 0, expense: 0 };
-                    categoryBreakdown[t.category].expense += amount;
+                    totalExpense += t.amount;
+                    expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
                 }
-
-                // Render transaction row
-                const row = projectTransactionListEl.insertRow();
-                row.classList.add(t.type === 'income' ? 'income-bg' : 'expense-bg', 'border-b');
-                row.innerHTML = `
-                    <td class="py-2 px-4">${formatDate(t.date)}</td>
-                    <td class="py-2 px-4">${t.type === 'income' ? 'รายรับ' : 'รายจ่าย'}</td>
-                    <td class="py-2 px-4">${formatCurrency(t.amount)}</td>
-                    <td class="py-2 px-4">${t.category}</td>
-                    <td class="py-2 px-4">${t.employee || '-'}</td> <td class="py-2 px-4">${t.description || '-'}</td>
-                `;
             });
 
-            // Update Project Budget Info
-            if (project) {
-                const remainingBudget = (project.budget || 0) - totalExpense;
-                projectBudgetInfoEl.textContent = `งบประมาณทั้งหมด: ${formatCurrency(project.budget || 0)} | ใช้ไปแล้ว: ${formatCurrency(totalExpense)} | คงเหลือ: ${formatCurrency(remainingBudget)}`;
+            const balance = totalIncome - totalExpense;
 
-                // --- Project Budget Chart (Pie Chart) ---
-                const projectBudgetCtx = document.getElementById('projectBudgetChart')?.getContext('2d');
-                if (projectBudgetCtx) {
-                    if (projectBudgetChartInstance) projectBudgetChartInstance.destroy();
+            document.getElementById('totalIncome').textContent = formatCurrency(totalIncome);
+            document.getElementById('totalExpense').textContent = formatCurrency(totalExpense);
+            document.getElementById('balance').textContent = formatCurrency(balance);
 
-                    let chartData = [];
-                    let chartLabels = [];
-                    let chartColors = [];
-
-                    if (project.budget > 0) {
-                        // If total expense is more than budget, show budget and overspent
-                        if (totalExpense > project.budget) {
-                            chartData = [project.budget, totalExpense - project.budget];
-                            chartLabels = ['งบประมาณที่กำหนด', 'ใช้จ่ายเกินงบ'];
-                            chartColors = ['#4CAF50', '#F44336']; // Green for budget, Red for overspent
-                        } else { // Within budget
-                            chartData = [totalExpense, project.budget - totalExpense];
-                            chartLabels = ['ใช้งบประมาณแล้ว', 'งบประมาณคงเหลือ'];
-                            chartColors = ['#FFC107', '#4CAF50']; // Amber for used, Green for remaining
-                        }
-                    } else { // No budget or budget is 0
-                        chartData = [totalExpense];
-                        chartLabels = ['รายจ่ายทั้งหมด'];
-                        chartColors = ['#F44336'];
-                    }
-
-                    projectBudgetChartInstance = new Chart(projectBudgetCtx, {
-                        type: 'pie',
-                        data: {
-                            labels: chartLabels,
-                            datasets: [{
-                                data: chartData,
-                                backgroundColor: chartColors,
-                                hoverOffset: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: { position: 'top' },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            let label = context.label || '';
-                                            if (label) label += ': ';
-                                            if (context.parsed !== null) label += `${formatCurrency(context.parsed)}`;
-                                            return label;
-                                        }
-                                    }
-                                },
-                                datalabels: {
-                                    formatter: (value, ctx) => {
-                                        let sum = 0;
-                                        let dataArr = ctx.chart.data.datasets[0].data;
-                                        dataArr.map(data => { sum += data; });
-                                        if (sum === 0) return '0%'; // Handle division by zero
-                                        let percentage = (value * 100 / sum).toFixed(0) + '%';
-                                        return percentage;
-                                    },
-                                    color: '#fff',
-                                    font: { weight: 'bold' }
-                                }
-                            }
-                        },
-                        plugins: [ChartDataLabels]
-                    });
-                }
-            } else {
-                projectBudgetInfoEl.textContent = 'ไม่มีข้อมูลงบประมาณสำหรับโปรเจคนี้';
-                if (projectBudgetChartInstance) projectBudgetChartInstance.destroy();
-            }
-
-
-            // --- Project Category Breakdown Chart (Bar Chart) ---
-            const projectCatBreakdownCtx = document.getElementById('projectCategoryBreakdownChart')?.getContext('2d');
-            if (projectCatBreakdownCtx) {
-                if (projectCategoryBreakdownChartInstance) projectCategoryBreakdownChartInstance.destroy();
-
-                const breakdownLabels = Object.keys(categoryBreakdown);
-                const incomeData = breakdownLabels.map(cat => categoryBreakdown[cat].income || 0);
-                const expenseData = breakdownLabels.map(cat => categoryBreakdown[cat].expense || 0);
-
-                projectCategoryBreakdownChartInstance = new Chart(projectCatBreakdownCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: breakdownLabels,
-                        datasets: [
-                            {
-                                label: 'รายรับ (โปรเจคนี้)',
-                                data: incomeData,
-                                backgroundColor: '#81C784', // Light green
-                                borderColor: darkenColor('#81C784', 20),
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'รายจ่าย (โปรเจคนี้)',
-                                data: expenseData,
-                                backgroundColor: '#EF9A9A', // Light red
-                                borderColor: darkenColor('#EF9A9A', 20),
-                                borderWidth: 1
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            x: { stacked: true },
-                            y: { beginAtZero: true, stacked: true, ticks: { callback: function(value) { return formatCurrency(value); } } }
-                        },
-                        plugins: {
-                            legend: { position: 'top' },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                callbacks: {
-                                    label: function(context) {
-                                        return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
-                                    }
-                                }
-                            },
-                            datalabels: {
-                                formatter: (value) => formatCurrency(value),
-                                color: '#000',
-                                anchor: 'end',
-                                align: 'top',
-                                font: { weight: 'bold' }
-                            }
-                        }
-                    },
-                    plugins: [ChartDataLabels]
-                });
-            }
+            renderCharts(incomeByCategory, expenseByCategory);
         }
 
-
-        // Transaction Form
-        document.getElementById('transactionForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const type = document.getElementById('type').value;
-                const amount = parseFloat(document.getElementById('amount').value);
-                const category = document.getElementById('category').value;
-                const project = document.getElementById('project').value;
-                const employee = document.getElementById('employee').value;
-                const description = document.getElementById('description').value;
-                const date = document.getElementById('date').value;
-                const attachmentInput = document.getElementById('attachment');
-                const attachmentFile = attachmentInput.files[0];
-
-                if (isNaN(amount) || amount <= 0) {
-                    Swal.fire('ข้อผิดพลาด!', 'กรุณากรอกจำนวนเงินที่ถูกต้องและมากกว่า 0', 'error');
-                    return;
-                }
-                if (!category) {
-                    Swal.fire('ข้อผิดพลาด!', 'กรุณาเลือกหมวดหมู่', 'error');
-                    return;
-                }
-                if (!date) {
-                    Swal.fire('ข้อผิดพลาด!', 'กรุณาเลือกวันที่', 'error');
-                    return;
-                }
-
-                let attachmentName = '';
-                if (attachmentFile) {
-                    // Generate file name: Project,Category,Date.extension
-                    const projectForFileName = project || 'ไม่มีโปรเจค';
-                    const categoryForFileName = category || 'ไม่มีหมวดหมู่';
-                    const formattedDateForFileName = formatDateForFilename(date); //YYYY-MM-DD
-                    const fileExtension = attachmentFile.name.split('.').pop();
-                    attachmentName = `${projectForFileName}-${categoryForFileName}-${formattedDateForFileName}.${fileExtension}`;
-                    
-                    // Simulate upload to Google Drive
-                    await uploadFileToGoogleDrive(attachmentFile, attachmentName);
-                }
-
-                transactions.push({ id: Date.now(), type, amount, category, project, employee, description, date, attachmentName });
-                saveData();
-                renderTransactions();
-                // Update dashboard summaries if on dashboard tab
-                if (document.getElementById('dashboard').classList.contains('active')) {
-                    renderAllProjectSummary();
-                    // If a project is currently selected in the dashboard, update its view
-                    const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                    if (selectedProjectName) {
-                        renderIndividualProjectDashboard(selectedProjectName);
-                    }
-                }
-                document.getElementById('transactionForm').reset();
-                attachmentInput.value = ''; // Clear file input
-                Swal.fire('สำเร็จ!', 'บันทึกรายการเรียบร้อยแล้ว', 'success');
-            } catch (error) {
-                console.error("Error adding transaction:", error);
-                Swal.fire('ข้อผิดพลาด!', 'เกิดข้อผิดพลาดในการบันทึกรายการ: ' + error.message, 'error');
-            }
-        });
-
-        async function uploadFileToGoogleDrive(file, desiredFileName) {
+        function showLoading() {
             Swal.fire({
-                title: 'กำลังอัปโหลดไฟล์...',
-                html: `กำลังอัปโหลดไฟล์: <b>${file.name}</b><br>ชื่อไฟล์ที่จะบันทึก: <b>${desiredFileName}</b><br><br><i>โปรดรอสักครู่...</i>`,
+                title: 'กำลังโหลด...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
                 }
             });
-
-            // Simulate API call and delay
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    // In a real application, you would use Google Drive API here.
-                    // This part would involve:
-                    // 1. Getting user's authorization (OAuth 2.0).
-                    // 2. Using the Google Drive API client library (e.g., gapi.client.drive.files.create).
-                    // 3. Handling the file content (e.g., converting to base64 or sending as Blob).
-                    // 4. Storing the actual Google Drive File ID instead of just the name.
-
-                    Swal.update({
-                        title: 'อัปโหลดสำเร็จ (จำลอง)',
-                        html: `ไฟล์ <b>${file.name}</b> ได้รับการจำลองการอัปโหลดแล้ว<br>ชื่อไฟล์ที่ตั้ง: <b>${desiredFileName}</b><br><br><i>ฟังก์ชันอัปโหลดจริงต้องเชื่อมต่อ Google Drive API และ Backend Server</i>`,
-                        icon: 'success',
-                        showConfirmButton: true,
-                        showCancelButton: false,
-                        allowOutsideClick: true,
-                    });
-                    resolve(true); // Resolve the promise to continue transaction saving
-                }, 2000); // Simulate 2-second upload time
-            });
         }
 
-        // Employee Form
-        document.getElementById('employeeForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            try {
-                const name = document.getElementById('employeeName').value;
-                const position = document.getElementById('employeePosition').value;
-                if (!name) {
-                    Swal.fire('ข้อผิดพลาด!', 'กรุณากรอกชื่อพนักงาน', 'error');
-                    return;
-                }
-                // Check for duplicate employee name
-                if (employees.some(emp => emp.name === name)) {
-                    Swal.fire('ข้อผิดพลาด!', 'ชื่อพนักงานนี้มีอยู่แล้ว', 'error');
-                    return;
-                }
-                employees.push({ id: Date.now(), name, position });
-                saveData();
-                renderEmployees();
-                populateFilterOptions(); // Update employee dropdown in transaction form/filters
-                document.getElementById('employeeForm').reset();
-                Swal.fire('สำเร็จ!', 'เพิ่มพนักงานเรียบร้อยแล้ว', 'success');
-            } catch (error) {
-                console.error("Error adding employee:", error);
-                Swal.fire('ข้อผิดพลาด!', 'เกิดข้อผิดพลาดในการเพิ่มพนักงาน: ' + error.message, 'error');
+        function hideLoading() {
+            Swal.close();
+        }
+
+        function showTab(event, tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active-tab', 'border-blue-500');
+                button.classList.add('border-transparent');
+            });
+            if (event && event.currentTarget) { // Check if event exists (for initial load and user clicks)
+                event.currentTarget.classList.add('active-tab', 'border-blue-500');
+            } else { // For initial DOMContentLoaded load, set the first button as active
+                document.querySelector('.tab-button').classList.add('active-tab', 'border-blue-500');
             }
-        });
 
-        // Project Form
-        document.getElementById('projectForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            try {
-                const name = document.getElementById('projectName').value;
-                const budget = parseFloat(document.getElementById('projectBudget').value) || 0;
-                const startDate = document.getElementById('projectStartDate').value;
-                const endDate = document.getElementById('projectEndDate').value;
-
-                if (!name) {
-                    Swal.fire('ข้อผิดพลาด!', 'กรุณากรอกชื่อโปรเจค', 'error');
-                    return;
-                }
-                if (projects.some(p => p.name === name)) {
-                    Swal.fire('ข้อผิดพลาด!', 'ชื่อโปรเจคนี้มีอยู่แล้ว', 'error');
-                    return;
-                }
-                if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-                    Swal.fire('ข้อผิดพลาด!', 'วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด', 'error');
-                    return;
-                }
-
-
-                projects.push({ id: Date.now(), name, budget, startDate, endDate }); // Include start/end dates
-                saveData();
-                renderProjects();
-                populateFilterOptions(); // Update project filter in transaction form
-                populateProjectSelectForDashboard(); // Update project dropdown in dashboard
-                if (document.getElementById('dashboard').classList.contains('active')) {
-                    renderAllProjectSummary();
-                }
-                document.getElementById('projectForm').reset();
-                Swal.fire('สำเร็จ!', 'เพิ่มโปรเจคเรียบร้อยแล้ว', 'success');
-            } catch (error) {
-                console.error("Error adding project:", error);
-                Swal.fire('ข้อผิดพลาด!', 'เกิดข้อผิดพลาดในการเพิ่มโปรเจค: ' + error.message, 'error');
+            if (tabId === 'dashboard') {
+                updateDashboardFromTransactions(); // Recalculate summary if data changed
+            } else if (tabId === 'transactionHistory') {
+                renderTransactionList(); // Re-render if new data arrived
+                filterTransactions(); // Apply current filter
+            } else if (tabId === 'report') {
+                populateReportFilters();
             }
-        });
+        }
 
-        // Category Form
-        document.getElementById('categoryForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            try {
-                const name = document.getElementById('categoryName').value;
-                const type = document.getElementById('categoryType').value;
-                if (!name) {
-                    Swal.fire('ข้อผิดพลาด!', 'กรุณากรอกชื่อหมวดหมู่', 'error');
-                    return;
-                }
-                if (categories.some(c => c.name === name)) {
-                    Swal.fire('ข้อผิดพลาด!', 'ชื่อหมวดหมู่นี้มีอยู่แล้ว', 'error');
-                    return;
-                }
-                categories.push({ id: Date.now(), name, type });
-                saveData();
-                renderCategories();
-                populateFilterOptions(); // Update category filter
-                if (document.getElementById('dashboard').classList.contains('active')) {
-                    // If a project is currently selected in the dashboard, update its view
-                    const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                    if (selectedProjectName) {
-                        renderIndividualProjectDashboard(selectedProjectName);
-                    }
-                }
-                document.getElementById('categoryForm').reset();
-                Swal.fire('สำเร็จ!', 'เพิ่มหมวดหมู่เรียบร้อยแล้ว', 'success');
-            } catch (error) {
-                console.error("Error adding category:", error);
-                Swal.fire('ข้อผิดพลาด!', 'เกิดข้อผิดพลาดในการเพิ่มหมวดหมู่: ' + error.message, 'error');
-            }
-        });
+        function renderCharts(incomeData, expenseData) {
+            if (incomeChartInstance) incomeChartInstance.destroy();
+            if (expenseChartInstance) expenseChartInstance.destroy();
 
-        // Filter Transactions
-        document.getElementById('applyFilter')?.addEventListener('click', renderTransactions);
-        document.getElementById('resetFilter')?.addEventListener('click', () => {
-            document.getElementById('filterType').value = 'all';
-            document.getElementById('filterProject').value = 'all';
-            document.getElementById('filterCategory').value = 'all';
-            document.getElementById('filterEmployee').value = 'all';
-            document.getElementById('filterStartDate').value = '';
-            document.getElementById('filterEndDate').value = '';
-            renderTransactions();
-        });
-
-        // Download PDF (Placeholder)
-        document.getElementById('downloadPdf')?.addEventListener('click', () => {
-            Swal.fire({
-                title: 'กำลังสร้าง PDF...',
-                html: 'โปรดรอสักครู่',
-                timer: 1500,
-                timerProgressBar: true,
-                didOpen: () => {
-                    Swal.showLoading();
+            const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+            incomeChartInstance = new Chart(incomeCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(incomeData),
+                    datasets: [{
+                        data: Object.values(incomeData),
+                        backgroundColor: [
+                            '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#F44336'
+                        ],
+                        hoverOffset: 4
+                    }]
                 },
-                willClose: () => {
-                    Swal.fire(
-                        'สำเร็จ!',
-                        'ไฟล์ PDF พร้อมดาวน์โหลด (ฟังก์ชันยังไม่สมบูรณ์)',
-                        'success'
-                    );
-                    // ในทางปฏิบัติควรสร้าง PDF และให้ดาวน์โหลดที่นี่
-                }
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed !== null) label += formatCurrency(context.parsed);
+                                    return label;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            formatter: (value, ctx) => {
+                                let sum = 0;
+                                let dataArr = ctx.chart.data.datasets[0].data;
+                                dataArr.map(data => { sum += data; });
+                                let percentage = (value * 100 / sum).toFixed(2) + "%";
+                                return percentage;
+                            },
+                            color: '#fff',
+                            font: { weight: 'bold' }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
             });
-        });
 
-        // Download Excel
-        document.getElementById('downloadExcel')?.addEventListener('click', exportToExcel);
-
-        // Utility Functions
-
-        function saveData() {
-            try {
-                localStorage.setItem('transactions', JSON.stringify(transactions));
-                localStorage.setItem('employees', JSON.stringify(employees));
-                localStorage.setItem('projects', JSON.stringify(projects));
-                localStorage.setItem('categories', JSON.stringify(categories));
-            } catch (error) {
-                console.error("Error saving data to localStorage:", error);
-                Swal.fire('ข้อผิดพลาด!', 'ไม่สามารถบันทึกข้อมูลได้ เนื่องจากพื้นที่จัดเก็บไม่เพียงพอหรือข้อผิดพลาดอื่นๆ', 'error');
-            }
+            const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+            expenseChartInstance = new Chart(expenseCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(expenseData),
+                    datasets: [{
+                        data: Object.values(expenseData),
+                        backgroundColor: [
+                            '#F44336', '#FF5722', '#FF9800', '#FFC107', '#FFEB3B', '#CDDC39', '#8BC34A', '#4CAF50'
+                        ],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed !== null) label += formatCurrency(context.parsed);
+                                    return label;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            formatter: (value, ctx) => {
+                                let sum = 0;
+                                let dataArr = ctx.chart.data.datasets[0].data;
+                                dataArr.map(data => { sum += data; });
+                                let percentage = (value * 100 / sum).toFixed(2) + "%";
+                                return percentage;
+                            },
+                            color: '#fff',
+                            font: { weight: 'bold' }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
         }
 
-        function loadData() {
-            try {
-                transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-                employees = JSON.parse(localStorage.getItem('employees')) || [];
-                projects = JSON.parse(localStorage.getItem('projects')) || [];
-                categories = JSON.parse(localStorage.getItem('categories')) || [];
-            } catch (error) {
-                console.error("Error loading data from localStorage:", error);
-                Swal.fire('ข้อผิดพลาด!', 'ไม่สามารถโหลดข้อมูลได้ อาจเกิดจากข้อมูลเสียหาย', 'error');
-                // Optionally clear corrupted data
-                // localStorage.clear();
-                // transactions = []; employees = []; projects = []; categories = [];
-            }
-        }
+        async function handleFormSubmit(event) {
+            event.preventDefault();
 
-        function setInitialSampleData() {
-            // Check if data already exists, if so, don't re-initialize
-            if (transactions.length > 0 || projects.length > 0 || categories.length > 0 || employees.length > 0) {
+            const transactionDate = document.getElementById('transactionDate').value;
+            const transactionType = document.querySelector('input[name="transactionType"]:checked').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const project = document.getElementById('project').value;
+            const employee = document.getElementById('employee').value;
+            const description = document.getElementById('description').value;
+            const attachmentFile = document.getElementById('attachment').files[0];
+
+            if (!transactionDate || isNaN(amount) || amount <= 0 || !category) {
+                Swal.fire('ข้อผิดพลาด', 'กรุณากรอกข้อมูล วันที่, จำนวนเงิน (ต้องมากกว่า 0) และหมวดหมู่ให้ถูกต้อง', 'warning');
                 return;
             }
 
-            categories = [
-                { id: Date.now() + 1, name: 'ค่าจ้างแรงงาน', type: 'expense' },
-                { id: Date.now() + 2, name: 'ค่าอุปกรณ์ไฟฟ้า', type: 'expense' },
-                { id: Date.now() + 3, name: 'ค่าที่ปรึกษา', type: 'expense' },
-                { id: Date.now() + 5, name: 'ค่าเดินทาง', type: 'expense' },
-                { id: Date.now() + 7, name: 'ค่าบริหารจัดการ', type: 'expense' },
-                { id: Date.now() + 8, name: 'ค่าวัสดุก่อสร้าง', type: 'expense' },
-                { id: Date.now() + 9, name: 'ค่าออกแบบ', type: 'expense' },
-                { id: Date.now() + 16, name: 'อื่นๆ (รายจ่าย)', type: 'expense' }, // Added a generic expense category
-                { id: Date.now() + 17, name: 'อื่นๆ (รายรับ)', type: 'income' }, // Added a generic income category for completeness
-            ];
+            showLoading();
 
-            employees = [
-                { id: Date.now() + 13, name: 'สมชาย ดีเยี่ยม', position: 'วิศวกรไฟฟ้า' },
-                { id: Date.now() + 14, name: 'สมหญิง เก่งกาจ', position: 'ผู้จัดการโครงการ' },
-                { id: Date.now() + 15, name: 'ประสงค์ สุขสบาย', position: 'ช่างเทคนิค' }
-            ];
-            
-            projects = [
-                { id: Date.now() + 10, name: 'โครงการติดตั้งระบบ Solar Farm', budget: 1500000, startDate: '2024-01-01', endDate: '2025-06-30' },
-                { id: Date.now() + 11, name: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า', budget: 1200000, startDate: '2024-02-15', endDate: '2025-02-28' },
-                { id: Date.now() + 12, name: 'โครงการสร้างสถานีไฟฟ้าย่อย', budget: 2000000, startDate: '2024-03-01', endDate: '2025-12-31' }
-            ];
+            let attachments = [];
+            if (attachmentFile) {
+                // Airtable expects attachments as an array of objects with 'url' and 'filename'
+                // For direct file upload, you need to convert it to base64 or upload to a separate service
+                // and provide a URL. However, Airtable's API for 'Attachment' field type
+                // directly accepts a file object when used with FormData in some contexts,
+                // but the standard way via JSON is to provide a URL.
+                // For simplicity here, we'll simulate a basic URL approach.
+                // For true direct upload to Airtable's attachment field via API, it's more complex
+                // and often involves server-side processing or using Airtable's official JS client.
+                // For now, let's assume we're not doing direct binary upload from client to Airtable API for 'Attachment' field.
+                // A common workaround for browser-based apps is to upload to a public cloud storage first (e.g., Cloudinary, AWS S3)
+                // and then send the URL to Airtable.
+                // Given the constraint of 'simple', we'll just omit direct file upload via this method for now,
+                // or assume the user will manually upload and provide a URL if needed.
 
-            transactions = [
-                // โครงการติดตั้งระบบ Solar Farm
-                { id: Date.now() + 20, type: 'income', amount: 500000, category: 'อื่นๆ (รายรับ)', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'สมหญิง เก่งกาจ', description: 'งวดแรก', date: '2024-01-15', attachmentName: 'โครงการติดตั้งระบบ Solar Farm-อื่นๆ (รายรับ)-2024-01-15.pdf' },
-                { id: Date.now() + 21, type: 'expense', amount: 150000, category: 'ค่าอุปกรณ์ไฟฟ้า', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'สมชาย ดีเยี่ยม', description: 'ซื้อแผงโซลาร์', date: '2024-01-20', attachmentName: 'โครงการติดตั้งระบบ Solar Farm-ค่าอุปกรณ์ไฟฟ้า-2024-01-20.jpg' },
-                { id: Date.now() + 22, type: 'expense', amount: 80000, category: 'ค่าจ้างแรงงาน', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'ประสงค์ สุขสบาย', description: 'ค่าติดตั้ง', date: '2024-02-10', attachmentName: '' },
-                { id: Date.now() + 23, type: 'income', amount: 700000, category: 'อื่นๆ (รายรับ)', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'สมหญิง เก่งกาจ', description: 'งวดสอง', date: '2024-03-01', attachmentName: 'โครงการติดตั้งระบบ Solar Farm-อื่นๆ (รายรับ)-2024-03-01.pdf' },
-                { id: Date.now() + 24, type: 'expense', amount: 100000, category: 'ค่าอุปกรณ์ไฟฟ้า', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'สมชาย ดีเยี่ยม', description: 'ซื้ออินเวอร์เตอร์', date: '2024-03-05', attachmentName: '' },
-                { id: Date.now() + 25, type: 'expense', amount: 50000, category: 'ค่าบริหารจัดการ', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'สมหญิง เก่งกาจ', description: 'ค่าควบคุมงาน', date: '2024-03-10', attachmentName: '' },
-                { id: Date.now() + 26, type: 'expense', amount: 15000, category: 'ค่าเดินทาง', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'สมชาย ดีเยี่ยม', description: 'ค่าเดินทางไปหน้างาน', date: '2024-03-12', attachmentName: '' },
-                { id: Date.now() + 27, type: 'expense', amount: 20000, category: 'ค่าวัสดุก่อสร้าง', project: 'โครงการติดตั้งระบบ Solar Farm', employee: 'ประสงค์ สุขสบาย', description: 'ค่าโครงสร้างรองรับ', date: '2024-04-01', attachmentName: 'โครงการติดตั้งระบบ Solar Farm-ค่าวัสดุก่อสร้าง-2024-04-01.jpg' },
+                // Simplified approach for this example: if attachment is present, we'll ignore it for now,
+                // or assume you'd upload it to a public URL and pass that URL.
+                // Airtable API docs show attachment field expects:
+                // [{ url: "https://example.com/file.pdf", filename: "file.pdf" }]
+                
+                // To actually upload a file from client to Airtable attachment field directly:
+                // 1. You'd typically need to use Airtable's JavaScript client library (which handles blob conversion)
+                // OR
+                // 2. Convert the file to a base64 string and send it, then Airtable processes it (not supported by default REST API for Attachment field)
+                // OR
+                // 3. Upload to a temporary cloud storage and send the URL to Airtable.
 
-                // โครงการอัปเกรดระบบจำหน่ายไฟฟ้า
-                { id: Date.now() + 30, type: 'income', amount: 400000, category: 'อื่นๆ (รายรับ)', project: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า', employee: 'สมหญิง เก่งกาจ', description: 'งวดแรก', date: '2024-02-01', attachmentName: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า-อื่นๆ (รายรับ)-2024-02-01.pdf' },
-                { id: Date.now() + 31, type: 'expense', amount: 200000, category: 'ค่าอุปกรณ์ไฟฟ้า', project: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า', employee: 'สมชาย ดีเยี่ยม', description: 'ซื้อสายส่ง', date: '2024-02-15', attachmentName: '' },
-                { id: Date.now() + 32, type: 'expense', amount: 120000, category: 'ค่าจ้างแรงงาน', project: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า', employee: 'ประสงค์ สุขสบาย', description: 'ค่าดำเนินการ', date: '2024-03-01', attachmentName: '' },
-                { id: Date.now() + 33, type: 'income', amount: 500000, category: 'อื่นๆ (รายรับ)', project: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า', employee: 'สมหญิง เก่งกาจ', description: 'งวดสอง', date: '2024-04-05', attachmentName: '' },
-                { id: Date.now() + 34, type: 'expense', amount: 80000, category: 'ค่าออกแบบ', project: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า', employee: 'สมชาย ดีเยี่ยม', description: 'ค่าปรับปรุงระบบ', date: '2024-04-10', attachmentName: '' },
-                { id: Date.now() + 35, type: 'expense', amount: 10000, category: 'ค่าเดินทาง', project: 'โครงการอัปเกรดระบบจำหน่ายไฟฟ้า', employee: 'สมชาย ดีเยี่ยม', description: 'ค่าเดินทางดูหน้างานต่างจังหวัด', date: '2024-04-12', attachmentName: '' },
+                // For the sake of simplicity, if attachmentFile exists, we'll assume a placeholder for now
+                // or explain that direct browser-to-Airtable attachment upload for this field type is tricky without a backend/client lib.
+                // Let's modify this to send as a data URL if small enough, or show an error if too large.
+                if (attachmentFile.size > 5 * 1024 * 1024) { // 5MB limit for data URL
+                    Swal.fire('ข้อผิดพลาด', 'ไฟล์แนบมีขนาดใหญ่เกินไป (สูงสุด 5MB สำหรับการแนบโดยตรงในตัวอย่างนี้). โปรดอัปโหลดด้วยตนเองหรือใช้บริการเก็บไฟล์ภายนอก', 'error');
+                    hideLoading();
+                    return;
+                }
+                const reader = new FileReader();
+                reader.readAsDataURL(attachmentFile);
+                await new Promise(resolve => {
+                    reader.onload = () => {
+                        attachments.push({
+                            filename: attachmentFile.name,
+                            url: reader.result // Data URL
+                        });
+                        resolve();
+                    };
+                    reader.onerror = (error) => {
+                        console.error('Error reading file:', error);
+                        resolve(); // Resolve anyway to continue with form submission
+                    };
+                });
+            }
 
-                // โครงการสร้างสถานีไฟฟ้าย่อย
-                { id: Date.now() + 40, type: 'income', amount: 800000, category: 'อื่นๆ (รายรับ)', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'สมหญิง เก่งกาจ', description: 'งวดแรก', date: '2024-03-10', attachmentName: 'โครงการสร้างสถานีไฟฟ้าย่อย-อื่นๆ (รายรับ)-2024-03-10.pdf' },
-                { id: Date.now() + 41, type: 'expense', amount: 300000, category: 'ค่าวัสดุก่อสร้าง', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'ประสงค์ สุขสบาย', description: 'ซื้อเหล็กโครงสร้าง', date: '2024-03-20', attachmentName: '' },
-                { id: Date.now() + 42, type: 'expense', amount: 250000, category: 'ค่าจ้างแรงงาน', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'ประสงค์ สุขสบาย', description: 'ค่าก่อสร้างฐานราก', date: '2024-04-01', attachmentName: '' },
-                { id: Date.now() + 43, type: 'expense', amount: 400000, category: 'ค่าอุปกรณ์ไฟฟ้า', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'สมชาย ดีเยี่ยม', description: 'หม้อแปลงไฟฟ้า', date: '2024-04-15', attachmentName: 'โครงการสร้างสถานีไฟฟ้าย่อย-ค่าอุปกรณ์ไฟฟ้า-2024-04-15.jpg' },
-                { id: Date.now() + 44, type: 'income', amount: 1000000, category: 'อื่นๆ (รายรับ)', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'สมหญิง เก่งกาจ', description: 'งวดสอง', date: '2024-05-01', attachmentName: '' },
-                { id: Date.now() + 45, type: 'expense', amount: 150000, category: 'ค่าที่ปรึกษา', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'สมชาย ดีเยี่ยม', description: 'ค่าที่ปรึกษาควบคุมงาน', date: '2024-05-05', attachmentName: '' },
-                { id: Date.now() + 46, type: 'expense', amount: 8000, category: 'ค่าเดินทาง', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'สมหญิง เก่งกาจ', description: 'ค่าเดินทางประชุมไซต์งาน', date: '2024-05-10', attachmentName: '' },
-                { id: Date.now() + 47, type: 'expense', amount: 50000, category: 'ค่าบริหารจัดการ', project: 'โครงการสร้างสถานีไฟฟ้าย่อย', employee: 'สมหญิง เก่งกาจ', description: 'ค่าใช้จ่ายสำนักงาน', date: '2024-06-01', attachmentName: '' },
-            ];
 
-            saveData();
-            console.log('Sample data initialized!');
+            const recordData = {
+                "fields": {
+                    "Date": transactionDate,
+                    "Type": transactionType,
+                    "Amount": amount,
+                    "Category": category,
+                    "Project": project,
+                    "Employee": employee,
+                    "Description": description
+                }
+            };
+
+            if (attachments.length > 0) {
+                recordData.fields.Attachment = attachments;
+            }
+
+            try {
+                const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ records: [recordData] }) // Airtable expects an array of records
+                });
+
+                if (!response.ok) {
+                    const errorDetails = await response.json();
+                    throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(errorDetails)}`);
+                }
+                const result = await response.json();
+
+                Swal.fire('สำเร็จ!', 'บันทึกรายการเรียบร้อยแล้ว', 'success');
+                document.getElementById('transactionForm').reset();
+                await fetchTransactions(); // Reload data after adding
+            } catch (error) {
+                console.error("Error adding transaction:", error);
+                Swal.fire('ข้อผิดพลาด', `ไม่สามารถบันทึกรายการได้: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderTransactionList(transactionsToDisplay = allTransactions) {
+            const transactionListBody = document.getElementById('transactionList');
+            transactionListBody.innerHTML = ''; // Clear previous list
+
+            // Sort transactions by date descending
+            const sortedTransactions = [...transactionsToDisplay].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedTransactions.forEach(t => {
+                const row = document.createElement('tr');
+                row.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-50', 'transaction-item');
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left whitespace-nowrap">${formatDate(t.date)}</td>
+                    <td class="py-3 px-6 text-left">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${t.type === 'income' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">
+                            ${t.type === 'income' ? 'รายรับ' : 'รายจ่าย'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-6 text-left">${formatCurrency(t.amount)}</td>
+                    <td class="py-3 px-6 text-left">${t.category || '-'}</td>
+                    <td class="py-3 px-6 text-left">${t.project || '-'}</td>
+                    <td class="py-3 px-6 text-left">${t.employee || '-'}</td>
+                    <td class="py-3 px-6 text-left">${t.description || '-'}</td>
+                    <td class="py-3 px-6 text-left">
+                        ${t.attachmentUrl ? `<a href="${t.attachmentUrl}" target="_blank" class="text-blue-500 hover:underline">
+                            ${t.attachmentName || 'ไฟล์แนบ'}
+                        </a>` : '-'}
+                    </td>
+                `;
+                transactionListBody.appendChild(row);
+            });
+        }
+
+        function filterTransactions() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allTransactions.filter(t => {
+                return Object.values(t).some(val =>
+                    String(val || '').toLowerCase().includes(searchTerm)
+                );
+            });
+            renderTransactionList(filtered);
+        }
+
+        function populateFilters() {
+            const categories = new Set();
+            const projects = new Set();
+            const employees = new Set();
+
+            allTransactions.forEach(t => {
+                if (t.category) categories.add(t.category);
+                if (t.project) projects.add(t.project);
+                if (t.employee) employees.add(t.employee);
+            });
+
+            populateDatalist('categoryOptions', categories);
+            populateDatalist('projectOptions', projects);
+            populateDatalist('employeeOptions', employees);
+
+            populateSelectOptions('filterCategory', categories);
+            populateSelectOptions('filterProject', projects);
+            populateSelectOptions('filterEmployee', employees);
+        }
+
+        function populateDatalist(datalistId, valuesSet) {
+            const datalist = document.getElementById(datalistId);
+            datalist.innerHTML = '';
+            valuesSet.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                datalist.appendChild(option);
+            });
+        }
+
+        function populateSelectOptions(selectId, valuesSet) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="all">ทั้งหมด</option>';
+            valuesSet.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            });
         }
 
         function formatDate(dateString) {
-            if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('th-TH', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            });
-        }
-
-        // Helper function for filename formatting (YYYY-MM-DD)
-        function formatDateForFilename(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function darkenColor(color, percent) {
-            const num = parseInt(color.replace("#", ""), 16);
-            const amt = Math.round(2.55 * percent);
-            const R = (num >> 16) - amt;
-            const G = (num >> 8 & 0x00FF) - amt;
-            const B = (num & 0x0000FF) - amt;
-            return `#${(
-                0x1000000 +
-                (R < 0 ? 0 : R) * 0x10000 +
-                (G < 0 ? 0 : G) * 0x100 +
-                (B < 0 ? 0 : B)
-            ).toString(16).slice(1)}`;
-        }
-
-        function renderTransactions() {
-            const transactionList = document.getElementById('transactionList');
-            if (!transactionList) return;
-            transactionList.innerHTML = '';
-
-            const filterType = document.getElementById('filterType')?.value || 'all';
-            const filterProject = document.getElementById('filterProject')?.value || 'all';
-            const filterCategory = document.getElementById('filterCategory')?.value || 'all';
-            const filterEmployee = document.getElementById('filterEmployee')?.value || 'all';
-            const filterStartDate = document.getElementById('filterStartDate')?.value;
-            const filterEndDate = document.getElementById('filterEndDate')?.value;
-
-            const filteredTransactions = transactions.filter(t => {
-                const transactionDate = new Date(t.date);
-                const start = filterStartDate ? new Date(filterStartDate) : null;
-                const end = filterEndDate ? new Date(filterEndDate) : null;
-
-                return (filterType === 'all' || t.type === filterType) &&
-                       (filterProject === 'all' || t.project === filterProject) &&
-                       (filterCategory === 'all' || t.category === filterCategory) &&
-                       (filterEmployee === 'all' || t.employee === filterEmployee) &&
-                       (!start || transactionDate >= start) &&
-                       (!end || transactionDate <= end);
-            });
-
-
-            filteredTransactions.forEach(t => {
-                const row = transactionList.insertRow();
-                row.classList.add(t.type === 'income' ? 'income-bg' : 'expense-bg', 'border-b');
-                row.innerHTML = `
-                    <td class="py-2 px-4">${formatDate(t.date)}</td>
-                    <td class="py-2 px-4">${t.type === 'income' ? 'รายรับ' : 'รายจ่าย'}</td>
-                    <td class="py-2 px-4">${formatCurrency(t.amount)}</td>
-                    <td class="py-2 px-4">${t.category}</td>
-                    <td class="py-2 px-4">${t.project || '-'}</td>
-                    <td class="py-2 px-4">${t.employee || '-'}</td>
-                    <td class="py-2 px-4">${t.description || '-'}</td>
-                    <td class="py-2 px-4">
-                        ${t.attachmentName ? `<button onclick="viewAttachment('${t.attachmentName}')" class="bg-purple-500 text-white p-1 rounded text-sm hover:bg-purple-600">ดูไฟล์</button>` : '-'}
-                    </td>
-                    <td class="py-2 px-4">
-                        <button onclick="editTransaction(${t.id})" class="bg-yellow-500 text-white p-1 rounded text-sm hover:bg-yellow-600 mr-2">แก้ไข</button>
-                        <button onclick="deleteTransaction(${t.id})" class="bg-red-500 text-white p-1 rounded text-sm hover:bg-red-600">ลบ</button>
-                    </td>
-                `;
-            });
-        }
-
-        function viewAttachment(fileName) {
-            Swal.fire({
-                title: 'ดูไฟล์แนบ',
-                html: `ชื่อไฟล์: <b>${fileName}</b><br><br><i>ฟังก์ชันดูไฟล์ยังไม่สมบูรณ์เนื่องจากยังไม่ได้เชื่อมต่อ Google Drive API และไฟล์ไม่ได้ถูกอัปโหลดจริง</i>`,
-                icon: 'info',
-                confirmButtonText: 'ตกลง'
-            });
-            // In a real application, you would construct a Google Drive view link
-            // and open it in a new tab, e.g.:
-            // window.open(`https://drive.google.com/file/d/${fileId}/view`, '_blank');
-        }
-
-        function editTransaction(id) {
-            const transaction = transactions.find(t => t.id === id);
-            if (!transaction) return;
-
-            Swal.fire({
-                title: 'แก้ไขรายการ',
-                html:
-                    `<label for="swal-type" class="block text-left text-sm font-medium text-gray-700">ประเภท</label><select id="swal-type" class="swal2-input"><option value="expense" ${transaction.type === 'expense' ? 'selected' : ''}>รายจ่าย</option><option value="income" ${transaction.type === 'income' ? 'selected' : ''}>รายรับ</option></select>` +
-                    `<label for="swal-amount" class="block text-left text-sm font-medium text-gray-700">จำนวนเงิน</label><input id="swal-amount" class="swal2-input" type="number" value="${transaction.amount}">` +
-                    `<label for="swal-category" class="block text-left text-sm font-medium text-gray-700">หมวดหมู่</label><select id="swal-category" class="swal2-input"></select>` +
-                    `<label for="swal-project" class="block text-left text-sm font-medium text-gray-700">โปรเจค</label><select id="swal-project" class="swal2-input"><option value="">ไม่มีโปรเจค</option></select>` +
-                    `<label for="swal-employee" class="block text-left text-sm font-medium text-gray-700">พนักงานที่ทำรายการ</label><select id="swal-employee" class="swal2-input"><option value="">ไม่ระบุพนักงาน</option></select>` +
-                    `<label for="swal-description" class="block text-left text-sm font-medium text-gray-700">รายละเอียด</label><input id="swal-description" class="swal2-input" value="${transaction.description || ''}">` +
-                    `<label for="swal-date" class="block text-left text-sm font-medium text-gray-700">วันที่</label><input id="swal-date" class="swal2-input" type="date" value="${transaction.date}">` +
-                    `<div class="text-sm text-gray-600 mt-2">ไฟล์แนบปัจจุบัน: ${transaction.attachmentName || 'ไม่มี'}</div>` +
-                    `<label for="swal-attachment" class="block text-left text-sm font-medium text-gray-700 mt-2">เปลี่ยนไฟล์แนบ (เลือกใหม่)</label><input type="file" id="swal-attachment" class="swal2-file" accept=".jpg, .jpeg, .png, .pdf">`,
-                focusConfirm: false,
-                didOpen: () => {
-                    const categorySelect = document.getElementById('swal-category');
-                    categories.forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat.name;
-                        option.textContent = cat.name;
-                        if (cat.name === transaction.category) {
-                            option.selected = true;
-                        }
-                        categorySelect?.appendChild(option);
-                    });
-                    const projectSelect = document.getElementById('swal-project');
-                    projects.forEach(proj => {
-                        const option = document.createElement('option');
-                        option.value = proj.name;
-                        option.textContent = proj.name;
-                        if (proj.name === transaction.project) {
-                            option.selected = true;
-                        }
-                        projectSelect?.appendChild(option);
-                    });
-                    const employeeSelect = document.getElementById('swal-employee');
-                    employees.forEach(emp => {
-                        const option = document.createElement('option');
-                        option.value = emp.name;
-                        option.textContent = emp.name;
-                        if (emp.name === transaction.employee) {
-                            option.selected = true;
-                        }
-                        employeeSelect?.appendChild(option);
-                    });
-                },
-                preConfirm: async () => { // Make preConfirm async
-                    const newType = document.getElementById('swal-type')?.value;
-                    const newAmount = parseFloat(document.getElementById('swal-amount')?.value);
-                    const newCategory = document.getElementById('swal-category')?.value;
-                    const newProject = document.getElementById('swal-project')?.value;
-                    const newEmployee = document.getElementById('swal-employee')?.value;
-                    const newDescription = document.getElementById('swal-description')?.value;
-                    const newDate = document.getElementById('swal-date')?.value;
-                    const newAttachmentFile = document.getElementById('swal-attachment')?.files[0];
-
-                    if (isNaN(newAmount) || newAmount <= 0) {
-                        Swal.showValidationMessage('กรุณากรอกจำนวนเงินที่ถูกต้องและมากกว่า 0');
-                        return false;
-                    }
-                    if (!newCategory) {
-                        Swal.showValidationMessage('กรุณาเลือกหมวดหมู่');
-                        return false;
-                    }
-                    if (!newDate) {
-                        Swal.showValidationMessage('กรุณาเลือกวันที่');
-                        return false;
-                    }
-
-                    let updatedAttachmentName = transaction.attachmentName;
-                    if (newAttachmentFile) {
-                        const projectForFileName = newProject || 'ไม่มีโปรเจค';
-                        const categoryForFileName = newCategory || 'ไม่มีหมวดหมู่';
-                        const formattedDateForFileName = formatDateForFilename(newDate);
-                        const fileExtension = newAttachmentFile.name.split('.').pop();
-                        updatedAttachmentName = `${projectForFileName}-${categoryForFileName}-${formattedDateForFileName}.${fileExtension}`;
-                        await uploadFileToGoogleDrive(newAttachmentFile, updatedAttachmentName);
-                    }
-                    
-                    return { newType, newAmount, newCategory, newProject, newEmployee, newDescription, newDate, updatedAttachmentName };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const { newType, newAmount, newCategory, newProject, newEmployee, newDescription, newDate, updatedAttachmentName } = result.value;
-                    const index = transactions.findIndex(t => t.id === id);
-                    if (index !== -1) {
-                        transactions[index] = {
-                            id,
-                            type: newType,
-                            amount: newAmount,
-                            category: newCategory,
-                            project: newProject,
-                            employee: newEmployee,
-                            description: newDescription,
-                            date: newDate,
-                            attachmentName: updatedAttachmentName // Save the new/updated attachment name
-                        };
-                        saveData();
-                        renderTransactions();
-                        if (document.getElementById('dashboard').classList.contains('active')) {
-                            renderAllProjectSummary();
-                            const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                            if (selectedProjectName) {
-                                renderIndividualProjectDashboard(selectedProjectName);
-                            }
-                        }
-                        Swal.fire('แก้ไขสำเร็จ!', 'รายการถูกแก้ไขแล้ว', 'success');
-                    }
-                }
-            });
-        }
-
-        function deleteTransaction(id) {
-            Swal.fire({
-                title: 'คุณแน่ใจหรือไม่?',
-                text: "คุณจะไม่สามารถย้อนกลับได้!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'ใช่, ลบเลย!',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    transactions = transactions.filter(t => t.id !== id);
-                    saveData();
-                    renderTransactions();
-                    if (document.getElementById('dashboard').classList.contains('active')) {
-                        renderAllProjectSummary();
-                        // If a project is currently selected in the dashboard, update its view
-                        const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                        if (selectedProjectName) {
-                            renderIndividualProjectDashboard(selectedProjectName);
-                        }
-                    }
-                    Swal.fire('ลบแล้ว!', 'รายการของคุณถูกลบแล้ว', 'success');
-                }
-            });
-        }
-
-        function renderProjects() {
-            const projectList = document.getElementById('projectList');
-            if (!projectList) return;
-            projectList.innerHTML = '';
-            projects.forEach(proj => {
-                const projectTransactions = transactions.filter(t => t.project === proj.name);
-                const totalIncome = projectTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-                const totalExpense = projectTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-                const balance = totalIncome - totalExpense;
-
-                const row = projectList.insertRow();
-                row.classList.add('border-b');
-                row.innerHTML = `
-                    <td class="py-2 px-4">${proj.name}</td>
-                    <td class="py-2 px-4">${proj.budget > 0 ? formatCurrency(proj.budget) : '-'}</td>
-                    <td class="py-2 px-4">${proj.startDate ? formatDate(proj.startDate) : '-'}</td>
-                    <td class="py-2 px-4">${proj.endDate ? formatDate(proj.endDate) : '-'}</td>
-                    <td class="py-2 px-4 text-green-700">${formatCurrency(totalIncome)}</td>
-                    <td class="py-2 px-4 text-red-700">${formatCurrency(totalExpense)}</td>
-                    <td class="py-2 px-4 ${balance >= 0 ? 'text-blue-700' : 'text-red-700'}">${formatCurrency(balance)}</td>
-                    <td class="py-2 px-4">
-                        <button onclick="editProject(${proj.id})" class="bg-yellow-500 text-white p-1 rounded text-sm hover:bg-yellow-600 mr-2">แก้ไข</button>
-                        <button onclick="deleteProject(${proj.id})" class="bg-red-500 text-white p-1 rounded text-sm hover:bg-red-600">ลบ</button>
-                    </td>
-                `;
-            });
-        }
-
-        function editProject(id) {
-            const project = projects.find(p => p.id === id);
-            if (!project) return;
-
-            Swal.fire({
-                title: 'แก้ไขโปรเจค',
-                html:
-                    `<label for="swal-projectName" class="block text-left text-sm font-medium text-gray-700">ชื่อโปรเจค</label><input id="swal-projectName" class="swal2-input" value="${project.name}">` +
-                    `<label for="swal-projectBudget" class="block text-left text-sm font-medium text-gray-700">งบประมาณ</label><input id="swal-projectBudget" class="swal2-input" type="number" value="${project.budget || 0}">` +
-                    `<label for="swal-projectStartDate" class="block text-left text-sm font-medium text-gray-700">กำหนดเริ่มงาน</label><input id="swal-projectStartDate" class="swal2-input" type="date" value="${project.startDate || ''}">` +
-                    `<label for="swal-projectEndDate" class="block text-left text-sm font-medium text-gray-700">กำหนดส่งงาน</label><input id="swal-projectEndDate" class="swal2-input" type="date" value="${project.endDate || ''}">`,
-                focusConfirm: false,
-                preConfirm: () => {
-                    const newName = document.getElementById('swal-projectName')?.value;
-                    const newBudget = parseFloat(document.getElementById('swal-projectBudget')?.value) || 0;
-                    const newStartDate = document.getElementById('swal-projectStartDate')?.value;
-                    const newEndDate = document.getElementById('swal-projectEndDate')?.value;
-
-                    if (!newName) {
-                        Swal.showValidationMessage('กรุณากรอกชื่อโปรเจค');
-                        return false;
-                    }
-                     // Check for duplicate name if changed
-                    if (newName !== project.name && projects.some(p => p.name === newName)) {
-                        Swal.showValidationMessage('ชื่อโปรเจคนี้มีอยู่แล้ว');
-                        return false;
-                    }
-                    if (newStartDate && newEndDate && new Date(newStartDate) > new Date(newEndDate)) {
-                        Swal.showValidationMessage('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด');
-                        return false;
-                    }
-                    return { newName, newBudget, newStartDate, newEndDate };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const { newName, newBudget, newStartDate, newEndDate } = result.value;
-                    const index = projects.findIndex(p => p.id === id);
-                    if (index !== -1) {
-                        // Update existing transactions to new project name if name changed
-                        if (projects[index].name !== newName) {
-                            transactions.forEach(t => {
-                                if (t.project === projects[index].name) {
-                                    t.project = newName;
-                                }
-                            });
-                        }
-                        projects[index] = { id, name: newName, budget: newBudget, startDate: newStartDate, endDate: newEndDate };
-                        saveData();
-                        renderProjects();
-                        renderTransactions(); // Re-render transactions to reflect project name changes
-                        populateFilterOptions(); // Update project filter
-                        populateProjectSelectForDashboard(); // Update project dropdown in dashboard
-                        if (document.getElementById('dashboard').classList.contains('active')) {
-                            renderAllProjectSummary();
-                            // If the edited project is currently selected in the dashboard, update its view
-                            const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                            if (selectedProjectName === newName) { // Check if the new name matches
-                                renderIndividualProjectDashboard(newName);
-                            } else if (selectedProjectName === project.name) { // If old name was selected, clear it
-                                document.getElementById('selectProjectDashboard').value = '';
-                                document.getElementById('individualProjectDashboard').classList.add('hidden');
-                            }
-                        }
-                        Swal.fire('แก้ไขสำเร็จ!', 'โปรเจคถูกแก้ไขแล้ว', 'success');
-                    }
-                }
-            });
-        }
-
-        function deleteProject(id) {
-            Swal.fire({
-                title: 'คุณแน่ใจหรือไม่?',
-                text: "รายการที่เกี่ยวข้องกับโปรเจคนี้จะไม่มีโปรเจคกำกับ",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'ใช่, ลบเลย!',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const deletedProjectName = projects.find(p => p.id === id)?.name;
-                    projects = projects.filter(p => p.id !== id);
-                    // Remove project from transactions
-                    transactions.forEach(t => {
-                        if (t.project === deletedProjectName) {
-                            t.project = ''; // Set to empty string or a default value
-                        }
-                    });
-                    saveData();
-                    renderProjects();
-                    renderTransactions(); // Re-render transactions
-                    populateFilterOptions(); // Update project filter
-                    populateProjectSelectForDashboard(); // Update project dropdown in dashboard
-                    if (document.getElementById('dashboard').classList.contains('active')) {
-                        renderAllProjectSummary();
-                        // If the deleted project was currently selected in the dashboard, hide its view
-                        const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                        if (selectedProjectName === deletedProjectName) {
-                            document.getElementById('selectProjectDashboard').value = '';
-                            document.getElementById('individualProjectDashboard').classList.add('hidden');
-                        }
-                    }
-                    Swal.fire('ลบแล้ว!', 'โปรเจคของคุณถูกลบแล้ว', 'success');
-                }
-            });
-        }
-
-
-        function renderEmployees() {
-            const employeeList = document.getElementById('employeeList');
-            if (!employeeList) return;
-            employeeList.innerHTML = '';
-            employees.forEach(emp => {
-                const row = employeeList.insertRow();
-                row.classList.add('border-b');
-                row.innerHTML = `
-                    <td class="py-2 px-4">${emp.name}</td>
-                    <td class="py-2 px-4">${emp.position || '-'}</td>
-                    <td class="py-2 px-4">
-                        <button onclick="editEmployee(${emp.id})" class="bg-yellow-500 text-white p-1 rounded text-sm hover:bg-yellow-600 mr-2">แก้ไข</button>
-                        <button onclick="deleteEmployee(${emp.id})" class="bg-red-500 text-white p-1 rounded text-sm hover:bg-red-600">ลบ</button>
-                    </td>
-                `;
-            });
-        }
-
-        function editEmployee(id) {
-            const employee = employees.find(e => e.id === id);
-            if (!employee) return;
-
-            Swal.fire({
-                title: 'แก้ไขพนักงาน',
-                html:
-                    `<label for="swal-employeeName" class="block text-left text-sm font-medium text-gray-700">ชื่อพนักงาน</label><input id="swal-employeeName" class="swal2-input" value="${employee.name}">` +
-                    `<label for="swal-employeePosition" class="block text-left text-sm font-medium text-gray-700">ตำแหน่ง</label><input id="swal-employeePosition" class="swal2-input" value="${employee.position || ''}">`,
-                focusConfirm: false,
-                preConfirm: () => {
-                    const newName = document.getElementById('swal-employeeName')?.value;
-                    const newPosition = document.getElementById('swal-employeePosition')?.value;
-                    if (!newName) {
-                        Swal.showValidationMessage('กรุณากรอกชื่อพนักงาน');
-                        return false;
-                    }
-                    // Check for duplicate name if changed
-                    if (newName !== employee.name && employees.some(emp => emp.name === newName)) {
-                        Swal.showValidationMessage('ชื่อพนักงานนี้มีอยู่แล้ว');
-                        return false;
-                    }
-                    return { newName, newPosition };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const { newName, newPosition } = result.value;
-                    const index = employees.findIndex(e => e.id === id);
-                    if (index !== -1) {
-                        // Update transactions with new employee name
-                        if (employees[index].name !== newName) {
-                            transactions.forEach(t => {
-                                if (t.employee === employees[index].name) {
-                                    t.employee = newName;
-                                }
-                            });
-                        }
-                        employees[index] = { id, name: newName, position: newPosition };
-                        saveData();
-                        renderEmployees();
-                        renderTransactions(); // Re-render transactions to reflect employee name changes
-                        populateFilterOptions(); // Update employee filter
-                        Swal.fire('แก้ไขสำเร็จ!', 'พนักงานถูกแก้ไขแล้ว', 'success');
-                    }
-                }
-            });
-        }
-
-        function deleteEmployee(id) {
-            Swal.fire({
-                title: 'คุณแน่ใจหรือไม่?',
-                text: "รายการที่เกี่ยวข้องกับพนักงานนี้จะไม่มีพนักงานกำกับ",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'ใช่, ลบเลย!',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const deletedEmployeeName = employees.find(e => e.id === id)?.name;
-                    employees = employees.filter(e => e.id !== id);
-                    // Remove employee from transactions
-                    transactions.forEach(t => {
-                        if (t.employee === deletedEmployeeName) {
-                            t.employee = ''; // Set to empty string or a default value
-                        }
-                    });
-                    saveData();
-                    renderEmployees();
-                    renderTransactions(); // Re-render transactions
-                    populateFilterOptions(); // Update employee filter
-                    Swal.fire('ลบแล้ว!', 'พนักงานของคุณถูกลบแล้ว', 'success');
-                }
-            });
-        }
-
-        function renderCategories() {
-            const categoryList = document.getElementById('categoryList');
-            if (!categoryList) return;
-            categoryList.innerHTML = '';
-            categories.forEach(cat => {
-                const row = categoryList.insertRow();
-                row.classList.add('border-b');
-                row.innerHTML = `
-                    <td class="py-2 px-4">${cat.name}</td>
-                    <td class="py-2 px-4">${cat.type === 'income' ? 'รายรับ' : 'รายจ่าย'}</td>
-                    <td class="py-2 px-4">
-                        <button onclick="editCategory(${cat.id})" class="bg-yellow-500 text-white p-1 rounded text-sm hover:bg-yellow-600 mr-2">แก้ไข</button>
-                        <button onclick="deleteCategory(${cat.id})" class="bg-red-500 text-white p-1 rounded text-sm hover:bg-red-600">ลบ</button>
-                    </td>
-                `;
-            });
-        }
-
-        function editCategory(id) {
-            const category = categories.find(c => c.id === id);
-            if (!category) return;
-
-            Swal.fire({
-                title: 'แก้ไขหมวดหมู่',
-                html:
-                    `<label for="swal-categoryName" class="block text-left text-sm font-medium text-gray-700">ชื่อหมวดหมู่</label><input id="swal-categoryName" class="swal2-input" value="${category.name}">` +
-                    `<label for="swal-categoryType" class="block text-left text-sm font-medium text-gray-700">ประเภท</label><select id="swal-categoryType" class="swal2-input"><option value="expense" ${category.type === 'expense' ? 'selected' : ''}>รายจ่าย</option><option value="income" ${category.type === 'income' ? 'selected' : ''}>รายรับ</option></select>`,
-                focusConfirm: false,
-                preConfirm: () => {
-                    const newName = document.getElementById('swal-categoryName')?.value;
-                    const newType = document.getElementById('swal-categoryType')?.value;
-                    if (!newName) {
-                        Swal.showValidationMessage('กรุณากรอกชื่อหมวดหมู่');
-                        return false;
-                    }
-                    // Check for duplicate name if changed
-                    if (newName !== category.name && categories.some(c => c.name === newName)) {
-                        Swal.showValidationMessage('ชื่อหมวดหมู่นี้มีอยู่แล้ว');
-                        return false;
-                    }
-                    return { newName, newType };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const { newName, newType } = result.value;
-                    const index = categories.findIndex(c => c.id === id);
-                    if (index !== -1) {
-                        // Update existing transactions to new category name if name changed
-                        if (categories[index].name !== newName) {
-                            transactions.forEach(t => {
-                                if (t.category === categories[index].name) {
-                                    t.category = newName;
-                                }
-                            });
-                        }
-                        categories[index] = { id, name: newName, type: newType };
-                        saveData();
-                        renderCategories();
-                        renderTransactions(); // Re-render transactions to reflect category name changes
-                        populateFilterOptions(); // Update category filter
-                        if (document.getElementById('dashboard').classList.contains('active')) {
-                            // If a project is currently selected in the dashboard, update its view
-                            const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                            if (selectedProjectName) {
-                                renderIndividualProjectDashboard(selectedProjectName);
-                            }
-                        }
-                        Swal.fire('แก้ไขสำเร็จ!', 'หมวดหมู่ถูกแก้ไขแล้ว', 'success');
-                    }
-                }
-            });
-        }
-
-        function deleteCategory(id) {
-            Swal.fire({
-                title: 'คุณแน่ใจหรือไม่?',
-                text: "รายการที่เกี่ยวข้องกับหมวดหมู่นี้จะไม่มีหมวดหมู่กำกับ",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'ใช่, ลบเลย!',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const deletedCategoryName = categories.find(c => c.id === id)?.name;
-                    categories = categories.filter(c => c.id !== id);
-                    // Remove category from transactions
-                    transactions.forEach(t => {
-                        if (t.category === deletedCategoryName) {
-                            t.category = ''; // Set to empty string or a default value
-                        }
-                    });
-                    saveData();
-                    renderCategories();
-                    renderTransactions(); // Re-render transactions
-                    populateFilterOptions(); // Update category filter
-                    if (document.getElementById('dashboard').classList.contains('active')) {
-                        // If a project is currently selected in the dashboard, update its view
-                        const selectedProjectName = document.getElementById('selectProjectDashboard').value;
-                        if (selectedProjectName) {
-                            renderIndividualProjectDashboard(selectedProjectName);
-                        }
-                    }
-                    Swal.fire('ลบแล้ว!', 'หมวดหมู่ของคุณถูกลบแล้ว', 'success');
-                }
-            });
-        }
-
-        function populateFilterOptions() {
-            const categorySelect = document.getElementById('category');
-            const filterCategorySelect = document.getElementById('filterCategory');
-            const projectSelect = document.getElementById('project');
-            const filterProjectSelect = document.getElementById('filterProject');
-            const employeeSelect = document.getElementById('employee'); // New employee select for form
-            const filterEmployeeSelect = document.getElementById('filterEmployee'); // New employee select for filter
-
-            // Clear previous options except 'all' and 'no project/employee'
-            if (categorySelect) categorySelect.innerHTML = '';
-            if (filterCategorySelect) filterCategorySelect.innerHTML = '<option value="all">ทั้งหมด</option>';
-            if (projectSelect) projectSelect.innerHTML = '<option value="">ไม่มีโปรเจค</option>';
-            if (filterProjectSelect) filterProjectSelect.innerHTML = '<option value="all">ทั้งหมด</option>';
-            if (employeeSelect) employeeSelect.innerHTML = '<option value="">ไม่ระบุพนักงาน</option>';
-            if (filterEmployeeSelect) filterEmployeeSelect.innerHTML = '<option value="all">ทั้งหมด</option>';
-
-            // Filter categories to show only 'expense' in the "บันทึกรายจ่าย" form by default
-            const expenseCategories = categories.filter(cat => cat.type === 'expense');
-            const incomeCategories = categories.filter(cat => cat.type === 'income');
-
-            // Populate category select for transaction form with expense categories first
-            if (categorySelect) {
-                expenseCategories.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat.name;
-                    option.textContent = cat.name;
-                    categorySelect.appendChild(option);
-                });
-                // Add income categories after expense categories, if any, for more flexibility
-                incomeCategories.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat.name;
-                    option.textContent = cat.name;
-                    categorySelect.appendChild(option);
-                });
-                // Add a default blank option if no categories are present
-                if (categories.length === 0) {
-                     const defaultOption = document.createElement('option');
-                     defaultOption.value = '';
-                     defaultOption.textContent = '-- เลือกหมวดหมู่ --';
-                     categorySelect.appendChild(defaultOption);
-                }
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            try {
+                return new Date(dateString).toLocaleDateString('th-TH', options);
+            } catch (e) {
+                return dateString;
             }
-            
-            // Populate filter category select with all categories
-            if (filterCategorySelect) {
-                categories.forEach(cat => {
-                    const filterOption = document.createElement('option');
-                    filterOption.value = cat.name;
-                    filterOption.textContent = cat.name;
-                    filterCategorySelect.appendChild(filterOption);
-                });
-            }
-
-
-            projects.forEach(proj => {
-                const option = document.createElement('option');
-                option.value = proj.name;
-                option.textContent = proj.name;
-                projectSelect?.appendChild(option);
-
-                const filterOption = document.createElement('option');
-                filterOption.value = proj.name;
-                filterOption.textContent = proj.name;
-                filterProjectSelect?.appendChild(filterOption);
-            });
-
-            employees.forEach(emp => {
-                const option = document.createElement('option');
-                option.value = emp.name;
-                option.textContent = emp.name;
-                employeeSelect?.appendChild(option);
-
-                const filterOption = document.createElement('option');
-                filterOption.value = emp.name;
-                filterOption.textContent = emp.name;
-                filterEmployeeSelect?.appendChild(filterOption);
-            });
         }
 
-        function exportToExcel() {
-            const filterType = document.getElementById('filterType')?.value || 'all';
-            const filterProject = document.getElementById('filterProject')?.value || 'all';
-            const filterCategory = document.getElementById('filterCategory')?.value || 'all';
-            const filterEmployee = document.getElementById('filterEmployee')?.value || 'all';
-            const filterStartDate = document.getElementById('filterStartDate')?.value;
-            const filterEndDate = document.getElementById('filterEndDate')?.value;
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amount);
+        }
 
-            const filteredTransactions = transactions.filter(t => {
+        function generateReport() {
+            const filterType = document.getElementById('filterType').value;
+            const filterProject = document.getElementById('filterProject').value;
+            const filterCategory = document.getElementById('filterCategory').value;
+            const filterEmployee = document.getElementById('filterEmployee').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            const start = startDate ? new Date(startDate + 'T00:00:00') : null;
+            const end = endDate ? new Date(endDate + 'T23:59:59') : null;
+
+            const filteredTransactions = allTransactions.filter(t => {
                 const transactionDate = new Date(t.date);
-                const start = filterStartDate ? new Date(filterStartDate) : null;
-                const end = filterEndDate ? new Date(filterEndDate) : null;
-
                 return (filterType === 'all' || t.type === filterType) &&
                        (filterProject === 'all' || t.project === filterProject) &&
                        (filterCategory === 'all' || t.category === filterCategory) &&
@@ -1728,29 +651,23 @@
                 'วันที่': formatDate(t.date),
                 'ประเภท': t.type === 'income' ? 'รายรับ' : 'รายจ่าย',
                 'จำนวนเงิน (บาท)': t.amount,
-                'หมวดหมู่': t.category,
+                'หมวดหมู่': t.category || '-',
                 'โปรเจค': t.project || '-',
                 'พนักงาน': t.employee || '-',
                 'รายละเอียด': t.description || '-',
-                'ชื่อไฟล์แนบ': t.attachmentName || '-'
+                'ชื่อไฟล์แนบ': t.attachmentName || '-',
+                'ลิงก์ไฟล์แนบ': t.attachmentUrl || '-'
             }));
 
-            // Create a worksheet
             const ws = XLSX.utils.json_to_sheet(data);
-
-            // Create a workbook and add the worksheet
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "รายงานรายรับ-รายจ่าย");
 
-            // Generate a unique filename
             const filename = `รายงานรายรับ-รายจ่าย_${new Date().toISOString().slice(0,10)}.xlsx`;
-
-            // Write the workbook to a file and save it
             XLSX.writeFile(wb, filename);
 
             Swal.fire('สำเร็จ!', 'ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้ว', 'success');
         }
-
     </script>
 </body>
 </html>
